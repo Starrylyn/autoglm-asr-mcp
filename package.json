@@ -1,5 +1,5 @@
 {
-  "name": "@autoglm/autoglm-asr-mcp",
+  "name": "autoglm-asr-mcp",
   "version": "0.1.0",
   "description": "MCP server for audio transcription using AutoGLM ASR API",
   "type": "module",

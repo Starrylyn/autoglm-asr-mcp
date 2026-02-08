@@ -4,7 +4,7 @@ MCP server for audio transcription using Zhipu AI's AutoGLM ASR API. Designed fo
 
 This repository includes two implementations:
 
-- **TypeScript (Node.js)**: published to npm as `@autoglm/autoglm-asr-mcp` (recommended if you want to run via `npx`)
+- **TypeScript (Node.js)**: published to npm as `autoglm-asr-mcp` (recommended if you want to run via `npx`)
 - **Python**: published to PyPI as `autoglm-asr-mcp`
 
 ## Features
@@ -43,7 +43,7 @@ Add to your `claude_desktop_config.json`:
   "mcpServers": {
     "autoglm-asr": {
       "command": "npx",
-      "args": ["-y", "@autoglm/autoglm-asr-mcp"],
+      "args": ["-y", "autoglm-asr-mcp"],
       "env": {
         "AUTOGLM_ASR_API_KEY": "your-api-key"
       }
@@ -59,7 +59,7 @@ Add to your `claude_desktop_config.json`:
   "mcpServers": {
     "autoglm-asr": {
       "command": "npx",
-      "args": ["-y", "@autoglm/autoglm-asr-mcp"],
+      "args": ["-y", "autoglm-asr-mcp"],
       "env": {
         "AUTOGLM_ASR_API_KEY": "your-api-key"
       }
