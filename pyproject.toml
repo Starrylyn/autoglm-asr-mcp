@@ -1,0 +1,45 @@
+[project]
+name = "autoglm-asr-mcp"
+version = "0.1.0"
+description = "MCP server for audio transcription using AutoGLM ASR API with sliding window concurrency"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "Zhipu AI" }]
+keywords = ["mcp", "asr", "speech-to-text", "transcription", "autoglm"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "mcp>=1.0.0",
+    "httpx>=0.27.0",
+    "pydub>=0.25.1",
+    "anyio>=4.0.0",
+    "webrtcvad>=2.0.10",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-asyncio", "ruff"]
+
+[project.scripts]
+autoglm-asr-mcp = "autoglm_asr_mcp.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/autoglm_asr_mcp"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]

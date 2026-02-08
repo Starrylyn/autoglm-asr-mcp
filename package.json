@@ -1,0 +1,42 @@
+{
+  "name": "@autoglm/autoglm-asr-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for audio transcription using AutoGLM ASR API",
+  "type": "module",
+  "bin": {
+    "autoglm-asr-mcp": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "test": "npm run build && node --test",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "asr",
+    "speech-to-text",
+    "transcription",
+    "autoglm",
+    "zhipu"
+  ],
+  "author": "Zhipu AI",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "p-limit": "^7.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
