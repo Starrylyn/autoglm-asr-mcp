@@ -120,8 +120,8 @@ Get audio file information (duration, format, estimated chunks).
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `AUTOGLM_ASR_API_KEY` | (required) | Your Zhipu AI API key |
-| `AUTOGLM_ASR_API_BASE` | `https://api.chatglm.cn/v1/chat/completions` | API endpoint |
-| `AUTOGLM_ASR_MODEL` | `autoglm-asr-nano-vllm` | Model name |
+| `AUTOGLM_ASR_API_BASE` | `https://open.bigmodel.cn/api/paas/v4/audio/transcriptions` | API endpoint |
+| `AUTOGLM_ASR_MODEL` | `glm-asr` | Model name |
 | `AUTOGLM_ASR_MAX_CHUNK_DURATION` | `25` | Max seconds per chunk |
 | `AUTOGLM_ASR_MAX_CONCURRENCY` | `5` | Max parallel API requests |
 | `AUTOGLM_ASR_CONTEXT_MAX_CHARS` | `2000` | Max context characters |
