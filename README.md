@@ -1,11 +1,6 @@
 # AutoGLM ASR MCP Server
 
-MCP server for audio transcription using Zhipu AI's AutoGLM ASR API. Designed for coding agents (Claude Code, Cursor, Windsurf, etc).
-
-This repository includes two implementations:
-
-- **TypeScript (Node.js)**: published to npm as `autoglm-asr-mcp` (recommended if you want to run via `npx`)
-- **Python**: published to PyPI as `autoglm-asr-mcp`
+MCP server for audio transcription using Zhipu AI's ASR API. Designed for coding agents (Claude Code, Cursor, Windsurf, etc).
 
 ## Features
 
@@ -13,7 +8,7 @@ This repository includes two implementations:
 - **Accurate**: Context passing between chunks for better transcription quality  
 - **Long audio support**: Automatic intelligent chunking at silence points (API limit: 30s/request)
 - **Multiple formats**: mp3, wav, m4a, flac, ogg, webm
-- **Zero dependencies**: Only requires ffmpeg installed on system
+- **Zero config**: Works out of the box, only requires API key
 
 ## Prerequisites
 
@@ -30,21 +25,19 @@ apt install ffmpeg
 choco install ffmpeg
 ```
 
-## Installation & Usage
+Get your API key from [Zhipu AI Open Platform](https://open.bigmodel.cn/).
 
-### TypeScript (Node.js)
+## Installation
 
-Install globally:
+### NPX (Recommended)
 
-```bash
-npm install -g autoglm-asr-mcp
-```
-
-Or use directly with npx (no installation required):
+No installation required. Use directly with npx:
 
 ```bash
 npx autoglm-asr-mcp
 ```
+
+## Configuration
 
 ### Claude Desktop / Claude Code
 
@@ -64,7 +57,9 @@ Add to your `claude_desktop_config.json`:
 }
 ```
 
-### Cursor / Windsurf / Other MCP Clients
+### Cursor / Windsurf
+
+Add to your MCP configuration:
 
 ```json
 {
@@ -80,30 +75,20 @@ Add to your `claude_desktop_config.json`:
 }
 ```
 
-Get your API key from [Zhipu AI Open Platform](https://open.bigmodel.cn/).
+### VS Code
 
-### Python
+For quick installation, click the button below:
 
-Install:
+[![Install with NPX in VS Code](https://img.shields.io/badge/VS_Code-NPM-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=autoglm-asr&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22autoglm-asr-mcp%22%5D%2C%22env%22%3A%7B%22AUTOGLM_ASR_API_KEY%22%3A%22your-api-key%22%7D%7D)
 
-```bash
-pip install autoglm-asr-mcp
-```
-
-Run:
-
-```bash
-export AUTOGLM_ASR_API_KEY="your-api-key"
-autoglm-asr-mcp
-```
-
-Example MCP client config (if your client supports running a local command):
+For manual installation, add to your `.vscode/mcp.json`:
 
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "autoglm-asr": {
-      "command": "autoglm-asr-mcp",
+      "command": "npx",
+      "args": ["-y", "autoglm-asr-mcp"],
       "env": {
         "AUTOGLM_ASR_API_KEY": "your-api-key"
       }
@@ -119,13 +104,28 @@ Example MCP client config (if your client supports running a local command):
 Transcribe an audio file to text.
 
 **Parameters:**
-- `audio_path` (required): Absolute path to the audio file
-- `context_mode` (optional): `"sliding"` (default), `"none"` (fastest), `"full_serial"` (best quality)
-- `max_concurrency` (optional): Max parallel requests (default: 5)
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `audio_path` | string | Yes | Absolute path to the audio file |
+| `context_mode` | string | No | `"sliding"` (default), `"none"` (fastest), `"full_serial"` (best quality) |
+| `max_concurrency` | number | No | Max parallel requests (default: 5) |
 
 ### `get_audio_info`
 
 Get audio file information (duration, format, estimated chunks).
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `audio_path` | string | Yes | Absolute path to the audio file |
+
+## Context Modes
+
+| Mode | Speed | Quality | Description |
+|------|-------|---------|-------------|
+| `sliding` | Fast | High | First chunk alone, then parallel with context (recommended) |
+| `none` | Fastest | Medium | All chunks in parallel, no context |
+| `full_serial` | Slow | Best | Sequential, full context chain |
 
 ## Environment Variables
 
@@ -138,13 +138,14 @@ Get audio file information (duration, format, estimated chunks).
 | `AUTOGLM_ASR_MAX_CONCURRENCY` | `5` | Max parallel API requests |
 | `AUTOGLM_ASR_CONTEXT_MAX_CHARS` | `2000` | Max context characters |
 
-## Context Modes
+## Supported Audio Formats
 
-| Mode | Speed | Quality | Description |
-|------|-------|---------|-------------|
-| `sliding` | ⚡⚡ | ⭐⭐⭐ | First chunk alone, then parallel with context (recommended) |
-| `none` | ⚡⚡⚡ | ⭐⭐ | All chunks in parallel, no context |
-| `full_serial` | ⚡ | ⭐⭐⭐⭐ | Sequential, full context chain |
+- mp3
+- wav
+- m4a
+- flac
+- ogg
+- webm
 
 ## License
 
