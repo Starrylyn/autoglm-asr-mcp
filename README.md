@@ -34,6 +34,18 @@ choco install ffmpeg
 
 ### TypeScript (Node.js)
 
+Install globally:
+
+```bash
+npm install -g autoglm-asr-mcp
+```
+
+Or use directly with npx (no installation required):
+
+```bash
+npx autoglm-asr-mcp
+```
+
 ### Claude Desktop / Claude Code
 
 Add to your `claude_desktop_config.json`:
