@@ -25,19 +25,19 @@ export interface TranscriptionResult {
   };
 }
 
-const HALLUCINATION_PATTERNS = [
-  /^The sound of .+/i,
-  /^There (is|are) no .+ sounds?/i,
-  /^No (speech|audio|sound|voice)/i,
-  /^This (audio|clip|segment) (contains?|is) (silence|silent|no)/i,
-  /^\[?(silence|no speech|inaudible)\]?$/i,
-  /^(音频|这段音频|该音频).*(静音|无声|没有声音|无内容)/i,
-];
+interface APIResponseSegment {
+  id: number;
+  start: number;
+  end: number;
+  text: string;
+}
 
-function isHallucination(text: string): boolean {
-  const trimmed = text.trim();
-  if (!trimmed) return false;
-  return HALLUCINATION_PATTERNS.some((pattern) => pattern.test(trimmed));
+interface APIResponse {
+  text?: string;
+  segments?: APIResponseSegment[];
+  // Fallback: chat completions format
+  choices?: Array<{ message?: { content?: string } }>;
+  content?: string;
 }
 
 export class ASRTranscriber {
@@ -47,51 +47,17 @@ export class ASRTranscriber {
     this.config = config ?? getConfig();
   }
 
+  /**
+   * Transcribe a single audio chunk via the /audio/transcriptions endpoint.
+   * Sends multipart/form-data with the audio file buffer.
+   */
   private async transcribeChunk(
     chunk: AudioChunk,
-    context: string,
-  ): Promise<string> {
-    const base64Audio = chunk.data.toString("base64");
-    const dataUrl = `data:audio/wav;base64,${base64Audio}`;
-
-    const messages: Array<{ role: string; content: string | Array<{ type: string; text?: string; audio_url?: { url: string } }> }> = [
-      {
-        role: "system",
-        content: "你是一个名为 ChatGLM 的人工智能助手。你是基于智谱AI训练的语言模型 GLM-4 模型开发的，你的任务是针对用户的问题和要求提供适当的答复和支持。\n\n",
-      },
-    ];
-
-    if (context) {
-      messages.push({
-        role: "user",
-        content: [{ type: "text", text: context }],
-      });
-    }
-
-    messages.push(
-      {
-        role: "user",
-        content: [
-          { type: "text", text: "<|begin_of_audio|><|endoftext|><|end_of_audio|>" },
-          { type: "audio_url", audio_url: { url: dataUrl } },
-        ],
-      },
-      {
-        role: "user",
-        content: [{ type: "text", text: "将这段音频转录成文字." }],
-      },
-    );
-
-    const payload = {
-      model: this.config.model,
-      messages,
-      max_tokens: 1024,
-      temperature: 1,
-      repetition_penalty: 1.1,
-      stream: false,
-      top_k: 1,
-      top_p: 0.9,
-    };
+  ): Promise<{ text: string; segments: TranscriptionSegment[] }> {
+    const formData = new FormData();
+    const blob = new Blob([chunk.data], { type: "audio/wav" });
+    formData.append("file", blob, "audio.wav");
+    formData.append("model", this.config.model);
 
     for (let attempt = 0; attempt <= this.config.maxRetries; attempt++) {
       try {
@@ -104,10 +70,9 @@ export class ASRTranscriber {
         const response = await fetch(this.config.apiBase, {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
             Authorization: `Bearer ${this.config.apiKey}`,
           },
-          body: JSON.stringify(payload),
+          body: formData,
           signal: controller.signal,
         });
 
@@ -117,20 +82,34 @@ export class ASRTranscriber {
           throw APIError.fromResponse(response.status, response.statusText);
         }
 
-        const result = await response.json() as { choices?: Array<{ message?: { content?: string } }>; content?: string };
+        const result = (await response.json()) as APIResponse;
 
+        // New /audio/transcriptions format: { text, segments }
+        if (result.text !== undefined) {
+          const segments: TranscriptionSegment[] = (result.segments ?? []).map(
+            (seg) => ({
+              start: seg.start,
+              end: seg.end,
+              text: seg.text,
+            }),
+          );
+          return { text: result.text, segments };
+        }
+
+        // Fallback: chat completions format
         if (result.choices?.[0]?.message?.content) {
-          return result.choices[0].message.content;
+          return { text: result.choices[0].message.content, segments: [] };
         }
         if (result.content) {
-          return result.content;
+          return { text: result.content, segments: [] };
         }
-        return "";
+
+        return { text: "", segments: [] };
       } catch (error) {
         const normalizedError =
           error instanceof APIError
             ? error
-            : (error instanceof Error && error.name === "AbortError")
+            : error instanceof Error && error.name === "AbortError"
               ? APIError.timeout(this.config.requestTimeout)
               : new APIError(String(error), undefined, true, error);
 
@@ -148,18 +127,13 @@ export class ASRTranscriber {
           );
         }
 
-        await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 * (attempt + 1)),
+        );
       }
     }
 
-    return "";
-  }
-
-  private truncateContext(text: string): string {
-    if (text.length <= this.config.contextMaxChars) {
-      return text;
-    }
-    return text.slice(-this.config.contextMaxChars);
+    return { text: "", segments: [] };
   }
 
   async transcribe(
@@ -191,74 +165,63 @@ export class ASRTranscriber {
 
     const concurrency = maxConcurrency ?? this.config.maxConcurrency;
     const limit = pLimit(concurrency);
-    const results = new Map<number, string>();
+    const textResults = new Map<number, string>();
+    const segmentResults = new Map<number, TranscriptionSegment[]>();
 
     const nonSilentChunks = chunks.filter((c) => !c.isSilent);
     const skippedSilent = chunks.length - nonSilentChunks.length;
 
     for (const chunk of chunks) {
       if (chunk.isSilent) {
-        results.set(chunk.index, "");
+        textResults.set(chunk.index, "");
+        segmentResults.set(chunk.index, []);
       }
     }
 
-    const transcribeWithLimit = (chunk: AudioChunk, ctx: string) =>
-      limit(async () => {
-        let text = await this.transcribeChunk(chunk, ctx);
-        if (isHallucination(text)) {
-          text = "";
-        }
-        results.set(chunk.index, text);
-      });
+    // New API doesn't use context passing, so all modes effectively run in parallel
+    await Promise.all(
+      nonSilentChunks.map((chunk) =>
+        limit(async () => {
+          const result = await this.transcribeChunk(chunk);
+          textResults.set(chunk.index, result.text);
+          // Offset API segments by the chunk's start time
+          const offsetSegments = result.segments.map((seg) => ({
+            start: seg.start + chunk.startMs / 1000,
+            end: seg.end + chunk.startMs / 1000,
+            text: seg.text,
+          }));
+          segmentResults.set(chunk.index, offsetSegments);
+        }),
+      ),
+    );
 
-    if (contextMode === "none") {
-      await Promise.all(
-        nonSilentChunks.map((chunk) => transcribeWithLimit(chunk, "")),
-      );
-    } else if (contextMode === "full_serial") {
-      let context = "";
-      for (const chunk of chunks) {
-        if (chunk.isSilent) continue;
-        let text = await this.transcribeChunk(chunk, context);
-        if (isHallucination(text)) {
-          text = "";
-        }
-        results.set(chunk.index, text);
+    // Merge segments in chunk order
+    const allSegments: TranscriptionSegment[] = [];
+    for (const chunk of chunks) {
+      const segs = segmentResults.get(chunk.index) ?? [];
+      if (segs.length > 0) {
+        allSegments.push(...segs);
+      } else {
+        // Fallback: create a segment from the text result
+        const text = textResults.get(chunk.index) ?? "";
         if (text) {
-          context = this.truncateContext(context + text);
-        }
-      }
-    } else if (contextMode === "sliding") {
-      const firstNonSilent = nonSilentChunks[0];
-      if (firstNonSilent) {
-        let firstText = await this.transcribeChunk(firstNonSilent, "");
-        if (isHallucination(firstText)) {
-          firstText = "";
-        }
-        results.set(firstNonSilent.index, firstText);
-
-        const remaining = nonSilentChunks.slice(1);
-        if (remaining.length > 0) {
-          const context = firstText ? this.truncateContext(firstText) : "";
-          await Promise.all(
-            remaining.map((chunk) => transcribeWithLimit(chunk, context)),
-          );
+          allSegments.push({
+            start: chunk.startMs / 1000,
+            end: chunk.endMs / 1000,
+            text,
+          });
         }
       }
     }
 
-    const segments: TranscriptionSegment[] = chunks.map((chunk) => ({
-      start: chunk.startMs / 1000,
-      end: chunk.endMs / 1000,
-      text: results.get(chunk.index) ?? "",
-    }));
-
-    const fullText = segments.map((s) => s.text).join("");
+    const fullText = chunks
+      .map((chunk) => textResults.get(chunk.index) ?? "")
+      .join("");
     const elapsed = (Date.now() - startTime) / 1000;
 
     return {
       text: fullText,
-      segments,
+      segments: allSegments,
       duration: totalDuration,
       stats: {
         chunks: chunks.length,

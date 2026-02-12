@@ -15,7 +15,7 @@ class ASRConfig:
     api_base: str = field(
         default_factory=lambda: os.getenv(
             "AUTOGLM_ASR_API_BASE", 
-            "https://api.chatglm.cn/v1/chat/completions"
+            "https://open.bigmodel.cn/api/paas/v4/audio/transcriptions"
         )
     )
     api_key: str = field(
@@ -24,7 +24,7 @@ class ASRConfig:
     model: str = field(
         default_factory=lambda: os.getenv(
             "AUTOGLM_ASR_MODEL", 
-            "autoglm-asr-nano-vllm"
+            "glm-asr"
         )
     )
     
