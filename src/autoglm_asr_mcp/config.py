@@ -24,7 +24,7 @@ class ASRConfig:
     model: str = field(
         default_factory=lambda: os.getenv(
             "AUTOGLM_ASR_MODEL", 
-            "glm-asr"
+            "glm-asr-2512"
         )
     )
     

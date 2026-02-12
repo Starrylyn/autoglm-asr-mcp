@@ -20,7 +20,7 @@ export function getConfig(): ASRConfig {
   return {
     apiBase: process.env.AUTOGLM_ASR_API_BASE || "https://open.bigmodel.cn/api/paas/v4/audio/transcriptions",
     apiKey,
-    model: process.env.AUTOGLM_ASR_MODEL || "glm-asr",
+    model: process.env.AUTOGLM_ASR_MODEL || "glm-asr-2512",
     maxChunkDuration: parseInt(process.env.AUTOGLM_ASR_MAX_CHUNK_DURATION || "25", 10),
     maxConcurrency: parseInt(process.env.AUTOGLM_ASR_MAX_CONCURRENCY || "5", 10),
     contextMaxChars: parseInt(process.env.AUTOGLM_ASR_CONTEXT_MAX_CHARS || "2000", 10),
