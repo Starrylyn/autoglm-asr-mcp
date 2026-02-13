@@ -1,7 +1,7 @@
 {
   "name": "autoglm-asr-mcp",
-  "version": "0.2.1",
-  "description": "MCP server for audio transcription using AutoGLM ASR API",
+  "version": "0.2.2",
+  "description": "MCP server for AutoGLM ASR speech-to-text transcription with long-audio chunking and context passing",
   "type": "module",
   "bin": {
     "autoglm-asr-mcp": "./dist/index.js"
@@ -20,12 +20,25 @@
   },
   "keywords": [
     "mcp",
+    "model-context-protocol",
     "asr",
     "speech-to-text",
     "transcription",
+    "audio-transcription",
+    "chinese-asr",
     "autoglm",
-    "zhipu"
+    "zhipu",
+    "agent-tools",
+    "llm-tools"
   ],
+  "homepage": "https://github.com/Starrylyn/autoglm-asr-mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Starrylyn/autoglm-asr-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Starrylyn/autoglm-asr-mcp/issues"
+  },
   "author": "Zhipu AI",
   "license": "MIT",
   "dependencies": {

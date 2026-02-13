@@ -1,32 +1,56 @@
-# AutoGLM ASR MCP - AI Agent 配置指南
+# AutoGLM ASR MCP - AI Agent Setup Guide
 
-本文档供 AI Agent（Claude Code、Cursor、Windsurf、OpenCode 等）快速配置 AutoGLM ASR 语音转文字 MCP 服务。
+This guide helps AI agents and developers quickly configure and use `autoglm-asr-mcp`.
 
-## 这是什么
+CN: 本文档用于让 Agent 和开发者快速完成 AutoGLM ASR MCP 的安装、配置和调用。
 
-一个 MCP Server，提供两个工具：
-- `transcribe_audio` - 将音频文件转录为文字（支持 mp3/wav/m4a/flac/ogg/webm），返回文字和带时间戳的 segments
-- `get_audio_info` - 获取音频文件的时长、格式等信息
+## For AI Agents (TL;DR)
 
-底层调用智谱 AI 的 `/audio/transcriptions` 接口（类似 OpenAI Whisper 风格），模型为 `glm-asr`。
+- Type: MCP server over stdio
+- Domain: ASR, speech-to-text, audio transcription
+- Tools: `transcribe_audio`, `get_audio_info`
+- Input requirement: absolute local audio path
+- Output: transcript text with timestamp segments
+- Best for: meeting notes, call analysis, subtitle drafting
 
-## 前置条件
+## Capability Snapshot
 
-系统必须安装 **ffmpeg**：
+| Field | Value |
+|------|-------|
+| Package | `autoglm-asr-mcp` |
+| Runtime | Node.js >= 18 |
+| API provider | Zhipu AutoGLM ASR |
+| Supported formats | `mp3`, `wav`, `m4a`, `flac`, `ogg`, `webm` |
+| Long audio | Yes, automatic chunking |
+| Recommended mode | `sliding` |
+
+## Prerequisites
+
+Install `ffmpeg`:
+
 ```bash
 # macOS
 brew install ffmpeg
+
 # Ubuntu/Debian
 apt install ffmpeg
+
+# Windows
+choco install ffmpeg
 ```
 
-## 配置方法
+Prepare API key from [Zhipu AI Open Platform](https://open.bigmodel.cn/).
 
-### 方式一：npx 运行（推荐，无需安装）
+## Quick Start
 
-在你的 MCP 配置文件中添加以下内容。不同客户端的配置文件位置不同，但格式基本相同。
+Run with `npx` (no global install):
 
-**Claude Desktop** (`claude_desktop_config.json`)：
+```bash
+npx autoglm-asr-mcp
+```
+
+Add to MCP config:
+
 ```json
 {
   "mcpServers": {
@@ -41,7 +65,10 @@ apt install ffmpeg
 }
 ```
 
-**Cursor** (`.cursor/mcp.json`)：
+## Client Config Examples
+
+Claude Desktop (`claude_desktop_config.json`):
+
 ```json
 {
   "mcpServers": {
@@ -56,7 +83,24 @@ apt install ffmpeg
 }
 ```
 
-**OpenCode** (`opencode.jsonc`)：
+Cursor (`.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "autoglm-asr": {
+      "command": "npx",
+      "args": ["-y", "autoglm-asr-mcp"],
+      "env": {
+        "AUTOGLM_ASR_API_KEY": "<your-api-key>"
+      }
+    }
+  }
+}
+```
+
+OpenCode (`opencode.jsonc`):
+
 ```jsonc
 {
   "mcp": {
@@ -73,65 +117,75 @@ apt install ffmpeg
 }
 ```
 
-### 方式二：Python pip 安装
+## Tool Reference
 
-```bash
-pip install autoglm-asr-mcp
-```
+### `transcribe_audio`
 
-MCP 配置：
-```json
-{
-  "mcpServers": {
-    "autoglm-asr": {
-      "command": "autoglm-asr-mcp",
-      "env": {
-        "AUTOGLM_ASR_API_KEY": "<your-api-key>"
-      }
-    }
-  }
-}
-```
+Transcribe an audio file into text with timestamp segments.
 
-## 工具使用说明
+| Arg | Type | Required | Default | Description |
+|-----|------|----------|---------|-------------|
+| `audio_path` | string | Yes | - | Absolute path to audio file |
+| `context_mode` | string | No | `sliding` | `sliding`, `none`, `full_serial` |
+| `max_concurrency` | integer | No | `5` | Range `1-20` |
 
-### transcribe_audio
+Returns:
 
-| 参数 | 必填 | 默认值 | 说明 |
-|------|------|--------|------|
-| `audio_path` | 是 | - | 音频文件的绝对路径 |
-| `context_mode` | 否 | `sliding` | `sliding` / `none`（最快）/ `full_serial`（保留兼容，新接口下效果等同） |
-| `max_concurrency` | 否 | `5` | 最大并发请求数 |
+- Full transcript text
+- Segment list with `start`, `end`, and `text`
+- Run stats (chunks, elapsed time, mode)
 
-返回示例：
-```
-text: "你好世界"
-segments: [{ start: 0.5, end: 1.2, text: "你好世界" }]
-```
+### `get_audio_info`
 
-### get_audio_info
+Get metadata for an audio file.
 
-| 参数 | 必填 | 说明 |
-|------|------|------|
-| `audio_path` | 是 | 音频文件的绝对路径 |
+| Arg | Type | Required | Description |
+|-----|------|----------|-------------|
+| `audio_path` | string | Yes | Absolute path to audio file |
 
-## 可选环境变量
+Returns:
 
-一般不需要修改，使用默认值即可：
+- Duration
+- Format
+- Sample rate
+- Channels
+- Estimated chunk count
 
-| 变量 | 默认值 | 说明 |
-|------|--------|------|
-| `AUTOGLM_ASR_API_KEY` | （必填） | 智谱 AI API Key |
-| `AUTOGLM_ASR_API_BASE` | `https://open.bigmodel.cn/api/paas/v4/audio/transcriptions` | API 地址 |
-| `AUTOGLM_ASR_MODEL` | `glm-asr` | 模型名称 |
-| `AUTOGLM_ASR_MAX_CHUNK_DURATION` | `25` | 单个音频块最大秒数 |
-| `AUTOGLM_ASR_MAX_CONCURRENCY` | `5` | 最大并发请求数 |
-| `AUTOGLM_ASR_CONTEXT_MAX_CHARS` | `2000` | 上下文最大字符数 |
+## Context Modes
 
-## 注意事项
+| Mode | Speed | Quality | Notes |
+|------|-------|---------|-------|
+| `sliding` | Fast | High | Recommended for most tasks |
+| `none` | Fastest | Medium | No cross-chunk context |
+| `full_serial` | Slow | Best | Sequential full-context chain |
 
-1. `audio_path` 必须是**绝对路径**，不支持相对路径
-2. 单次 API 请求限制 30 秒音频，超长音频会自动分块处理
-3. 支持的格式：mp3、wav、m4a、flac、ogg、webm
-4. 如果遇到超时，可以通过 `AUTOGLM_ASR_REQUEST_TIMEOUT` 环境变量调整（默认 60 秒）
-5. API Key 从 [智谱AI开放平台](https://open.bigmodel.cn/) 获取
+## Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `AUTOGLM_ASR_API_KEY` | Yes | - | Zhipu API key |
+| `AUTOGLM_ASR_API_BASE` | No | `https://open.bigmodel.cn/api/paas/v4/audio/transcriptions` | API endpoint |
+| `AUTOGLM_ASR_MODEL` | No | `glm-asr-2512` | ASR model name |
+| `AUTOGLM_ASR_MAX_CHUNK_DURATION` | No | `25` | Max seconds per chunk |
+| `AUTOGLM_ASR_MAX_CONCURRENCY` | No | `5` | Default concurrency |
+| `AUTOGLM_ASR_CONTEXT_MAX_CHARS` | No | `2000` | Max context chars |
+| `AUTOGLM_ASR_REQUEST_TIMEOUT` | No | `60` | Request timeout (seconds) |
+| `AUTOGLM_ASR_MAX_RETRIES` | No | `2` | Retry attempts |
+
+## Constraints and Notes
+
+- `audio_path` must be an absolute path.
+- Inputs are local files, not remote URLs.
+- Very noisy audio or overlapping speakers may reduce quality.
+- API request limit per chunk is handled by automatic chunking.
+
+## Troubleshooting
+
+- `ffmpeg not found`: install `ffmpeg` and restart client.
+- `AUTOGLM_ASR_API_KEY environment variable is required`: set API key in MCP config.
+- `File not found`: verify absolute file path and permissions.
+- Timeout/network error: increase `AUTOGLM_ASR_REQUEST_TIMEOUT` or retry with smaller concurrency.
+
+## Keywords (for Search and Retrieval)
+
+`mcp`, `model-context-protocol`, `asr`, `speech-to-text`, `transcription`, `autoglm`, `zhipu`, `audio-transcription`, `chinese-asr`, `meeting-transcript`, `subtitle-generation`, `voice-to-text`, `agent-tools`
